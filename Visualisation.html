@@ -1,0 +1,166 @@
+<html>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script> <!--Load the AJAX API--> 
+        
+  <head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>  <!--Load the Charts-->
+    <script type="text/javascript">
+        
+    google.charts.load('current', {'packages':['corechart']}); //To load google charts
+    
+        
+    function drawLineChart(){ 
+        
+    var date = document.getElementById('date').value; //Gets the value held in date
+    var split2 = date.split("-"); //Split the date using -
+    var format = split2[2]+"/"+split2[1]+"/"+split2[0]; //For correct date format
+        
+    var x = document.getElementById('dropdownId') [document.getElementById('dropdownId').options.selectedIndex]; //Gets element in dropdown
+    var loc = x.innerHTML; 
+    var file = x.value;
+           
+    $.ajax({ //Ajax to process xml files
+        url: file,
+        dataType: 'xml',
+        success: function (xml) {
+                var data = new google.visualization.DataTable();
+                data.addColumn('timeofday', 'Time'); //Column for time
+                data.addColumn('number', 'Value'); //Column for value
+        
+        var data2 = xml.getElementsByTagName("reading"); //stores reading into data2
+
+        for (var x=0; x< data2.length; x++){
+                if(data2[x].getAttribute("date") == format){
+                    
+                    var time = data2[x].getAttribute("time"); //Get the time attribute
+                    var split = time.split(":"); //Split with :
+                    var ntime = [parseInt(split[0]), parseInt(split[1]), parseInt(split[2])]; //Format time from data
+                    var value = data2[x].getAttribute("val");
+                    data.addRow([ntime, parseInt(value)]);    
+                }    
+        }    
+        data.sort({column:0}) //Sort the data from 0 column to correct format
+            
+        var chart = new google.visualization.LineChart(document.querySelector('#chart_div'));
+        chart.draw(data, { //Draw chart / Visualise data
+            'title': 'Levels of Nitrogen Dioxide at: ' + loc,
+            'hAxis': {title: 'Time of day'}, //To name axis
+            'vAxis': {title: 'Value'},
+            'height': 635,
+            'width': 1400
+        });
+    }
+}); //End Ajax  
+} //End line chart function 
+            
+
+              
+        
+    function drawScatterChart(){
+                  
+    var id2 = document.getElementById('dropdownId2') [document.getElementById('dropdownId2').options.selectedIndex]; //Value held in location dropdown
+    var x = document.getElementById('dropdownYear') [document.getElementById('dropdownYear').options.selectedIndex]; //Value held in Year dropdown
+    var loc = x.innerHTML; //For the year
+    var file = id2.value; //For the location
+           
+    $.ajax({ //Ajax to process xml files
+        url: file,
+        dataType: 'xml',
+        success: function (xml) {
+                var data = new google.visualization.DataTable();
+                var data=[];
+                var array = [[{label: 'Date', id: 'date', type: 'date'},
+                             {label: 'NO2 Levels', id: 'no2', type: 'number'}]]; 
+            
+                var data2 = xml.getElementsByTagName("reading"); //Stores readings into data2 from ajax call
+        
+                for (var y=0; y< data2.length; y++){
+                    var data2_date = data2[y].getAttribute("date"); //Gets the date 
+                    var data2_year = data2_date.substring(data2_date.lastIndexOf("/")+1,data2_date.length); //Gets the year
+                
+                if(data2_year == loc){ //Average values per day  
+                    var date = data2[y].getAttribute("date");
+                    var val = data2[y].getAttribute("val");
+                    data.push([date, parseInt(val)]); //Add for parsing  
+                    }
+                }
+
+                var d_date=[]; //Get all the dates
+                for(x=0; x<data.length;x++){
+                    if(!d_date.includes(data[x][0])){
+                        d_date.push(data[x][0]); //Push dates to data array
+                    }
+                }
+                
+                for(x= 0; x< d_date.length; x++){ //Count readings
+                    var count = 0;
+                    var v = 0;
+                    for(i = 0; i < data.length; i++){
+                        if(data[i][0] == d_date[x]){
+                            v+=data[i][1];
+                            count++; //inc count
+                        }
+                    }
+                    
+                    var d = d_date[x].split("/"); //Average value for each day
+                    array.push([new Date(d[2], d[1]-1, d[0]), v/count]);
+                }
+            
+                    var table = new google.visualization.arrayToDataTable(array); 
+                    table.sort({column:0}) //Sort the data from 0 column to correct format
+                    var options = {"title": "Levels of Nitrogen Dioxide at: " + file + " in " + loc,
+                                  "hAxis": {title: 'Month'},
+                                  "vAxis": {title: 'Value'},
+                                  "height": 635,
+                                  "width": 1400};
+            
+                    //Draw chart / Visualise data
+                    var chart = new google.visualization.ScatterChart(document.querySelector('#scatter'));
+                    chart.draw(table, options);
+                }    
+        }); //End Ajax       
+    
+} //end function
+
+         
+</script>
+      
+</head>
+    
+    
+    <body>
+    <h2>Line Chart</h2>
+    <input id="date" type="date"> <!-- date --> 
+    <select id=dropdownId> <!-- dropdown --> 
+    <option value="brislington_no2.xml">Brislington</option>
+    <option value="fishponds_no2.xml">Fishponds</option>
+    <option value="parson_st_no2.xml">Parson_Street</option>
+    <option value="rupert_st_no2.xml">Rupert_Street</option>
+    <option value="wells_rd_no2.xml">Wells_Road</option>
+    <option value="newfoundland_way_no2.xml">Newfoundland_Way</option>
+    </select>    
+    <input type="submit" value="Submit" onClick="drawLineChart()"> <!-- submit --> 
+    
+    <div id='chart_div' style="width:500; height:635"></div>
+    
+   
+    <hr/>
+    <h2>Scatter Chart</h2>
+    <select id=dropdownId2> <!-- dropdown for location --> 
+    <option value="brislington_no2.xml">Brislington</option>
+    <option value="fishponds_no2.xml">Fishponds</option>
+    <option value="parson_st_no2.xml">Parson_Street</option>
+    <option value="rupert_st_no2.xml">Rupert_Street</option>
+    <option value="wells_rd_no2.xml">Wells_Road</option>
+    <option value="newfoundland_way_no2.xml">Newfoundland_Way</option>
+    </select>      
+    <select id=dropdownYear> <!-- dropdown for year --> 
+    <option value="2014">2014</option>
+    <option value="2015">2015</option>
+    <option value="2016">2016</option>
+    <option value="2017">2017</option>
+    </select>     
+    <input type="submit" value="Submit" onClick="drawScatterChart()"> <!-- submit --> 
+    <div id="scatter" style="width:500; height:635"></div>
+
+    </body>
+</html>
